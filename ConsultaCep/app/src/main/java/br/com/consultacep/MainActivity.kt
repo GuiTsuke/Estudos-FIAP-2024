@@ -1,6 +1,7 @@
 package br.com.consultacep
 
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Column
@@ -11,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Search
@@ -33,7 +35,12 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import br.com.consultacep.model.Endereco
+import br.com.consultacep.service.RetrofitFactory
 import br.com.consultacep.ui.theme.ConsultaCepTheme
+import retrofit2.Call
+import retrofit2.Callback
+import retrofit2.Response
 
 
 class MainActivity : ComponentActivity() {
@@ -46,7 +53,7 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                   CepScreen()
+                    CepScreen()
                 }
             }
         }
@@ -61,6 +68,9 @@ fun CepScreen() {
     var cidadeState by remember { mutableStateOf("") }
     var ruaState by remember { mutableStateOf("") }
 
+    var listaCepsState by remember {
+        mutableStateOf(listOf<Endereco>())
+    }
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -88,7 +98,26 @@ fun CepScreen() {
                         Text(text = "Qual o CEP procurado?")
                     },
                     trailingIcon = {
-                        IconButton(onClick = { /*TODO*/ }) {
+                        IconButton(onClick = {
+                            var call = RetrofitFactory()
+                                .getCepService()
+                                .getEnderecoByCep(cep = cepState)
+
+                            call.enqueue(object : Callback<Endereco>{
+                                override fun onResponse(
+                                    call: Call<Endereco>,
+                                    response: Response<Endereco>
+                                ) {
+                                    listaCepsState = listOf(response.body()!!)
+                                }
+
+                                override fun onFailure(call: Call<Endereco>, t: Throwable) {
+                                    Log.i("ERRO DE ONFAILURE DA REQUISICAO de CEP", "onFailure: ${t.message}")
+                                }
+
+                            })
+
+                        }) {
                             Icon(
                                 imageVector = Icons.Default.Search,
                                 contentDescription = ""
@@ -105,7 +134,7 @@ fun CepScreen() {
                     fontWeight = FontWeight.Bold
                 )
                 Spacer(modifier = Modifier.height(8.dp))
-                Row() {
+                Row{
                     OutlinedTextField(
                         value = ufState,
                         onValueChange = {
@@ -154,35 +183,60 @@ fun CepScreen() {
                             capitalization = KeyboardCapitalization.Words
                         )
                     )
-                    IconButton(onClick = { /*TODO*/ }) {
+                    IconButton(onClick = {
+                        var call = RetrofitFactory()
+                            .getCepService()
+                            .getEnderecosByUfCidade(
+                                uf = ufState,
+                                cidade = cidadeState,
+                                rua = ruaState
+                            )
+
+                        call.enqueue(object : Callback<List<Endereco>> {
+                            override fun onResponse(
+                                call: Call<List<Endereco>>,
+                                response: Response<List<Endereco>>
+                            ) {
+                                listaCepsState = response.body()!!
+                            }
+
+                            override fun onFailure(call: Call<List<Endereco>>, t: Throwable) {
+                                Log.i("ERRO DE ONFAILURE DA REQUISICAO", "onFailure: ${t.message}")
+                            }
+
+                        })
+                    }) {
                         Icon(imageVector = Icons.Default.Search, contentDescription = "")
                     }
                 }
             }
         }
         Spacer(modifier = Modifier.height(8.dp))
-        LazyColumn() {
-            items(120) {
-                CardEndereco()
+        LazyColumn{
+            items(listaCepsState) {
+                CardEndereco(endereco = it)
             }
         }
     }
 }
 
 @Composable
-fun CardEndereco() {
-    Card(modifier = Modifier
-        .fillMaxWidth()
-        .padding(bottom = 4.dp)) {
-        Column(modifier = Modifier
+fun CardEndereco(endereco: Endereco) {
+    Card(
+        modifier = Modifier
             .fillMaxWidth()
-            .padding(8.dp)
+            .padding(bottom = 4.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(8.dp)
         ) {
-            Text(text = "CEP:")
-            Text(text = "Rua:")
-            Text(text = "Cidade:")
-            Text(text = "Bairro:")
-            Text(text = "UF:")
+            Text(text = "CEP: ${endereco.cep}")
+            Text(text = "Rua: ${endereco.rua}")
+            Text(text = "Cidade: ${endereco.cidade}")
+            Text(text = "Bairro: ${endereco.bairro}")
+            Text(text = "UF: ${endereco.uf}")
         }
     }
 }

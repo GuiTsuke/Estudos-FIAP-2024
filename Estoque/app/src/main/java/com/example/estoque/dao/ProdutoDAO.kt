@@ -22,7 +22,7 @@ interface ProdutoDAO {
     @Delete
     fun excluir(listaProdutos: List<Produto>): Int
 
-    @Query("SELECT * FROM TB_PRODUTOS ORDER BY nome")
+    @Query("SELECT * FROM TB_PRODUTOS ORDER BY nome ASC")
     fun buscarTodos(): List<Produto>
 
     @Query("SELECT * FROM TB_PRODUTOS WHERE id = :idBusca")

@@ -5,11 +5,16 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
+import androidx.compose.material3.Card
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -22,12 +27,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.estoque.model.Produto
+import com.example.estoque.repository.ProdutoRepository
 import com.example.estoque.ui.theme.EstoqueTheme
 
 class MainActivity : ComponentActivity() {
@@ -49,6 +56,13 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun CadastroScreen() {
+
+    val context = LocalContext.current
+    val produtoRepository = ProdutoRepository(context)
+
+    var listaProdutos by remember {
+        mutableStateOf(produtoRepository.buscarTodos())
+    }
 
     var nomeProdutoState by remember {
         mutableStateOf("")
@@ -114,18 +128,46 @@ fun CadastroScreen() {
             Text(text = "Disponível")
         }
         Button(
-            onClick = { /*TODO*/ },
+            onClick = {
+                val produto = Produto(
+                    nome = nomeProdutoState,
+                    quantidade = quantidadeState.toInt(),
+                    dataVencimento = dataVencimentoState,
+                    disponivel = disponivelState
+                )
+
+                produtoRepository.salvar(produto)
+                listaProdutos = produtoRepository.buscarTodos()
+
+            },
             modifier = Modifier.fillMaxWidth()
         ) {
             Text(text = "Salvar")
         }
-    }
-}
-
-@Preview(showBackground = true, showSystemUi = true)
-@Composable
-fun CadastroScreenPreview() {
-    EstoqueTheme {
-        CadastroScreen()
+        Spacer(modifier = Modifier.height(16.dp))
+        LazyColumn(
+            modifier = Modifier.fillMaxSize()
+        ) {
+            items(listaProdutos) {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(100.dp)
+                        .padding(bottom = 8.dp)
+                ) {
+                    Column {
+                        Text(text = "Nome: ${it.nome}")
+                        Text(text = "Qtd: ${it.quantidade}")
+                        Text(text = "Data de Vencimento: ${it.dataVencimento}")
+                        var disp = "Não"
+                        if (it.disponivel)
+                        {
+                            disp = "Sim"
+                        }
+                        Text(text = "Disponivel: ${disp}")
+                    }
+                }
+            }
+        }
     }
 }
